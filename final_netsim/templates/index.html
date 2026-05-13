@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NetSim — Network Protocol Simulator</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080c14;--bg2:#0d1220;--bg3:#111828;--panel:#0f1520;--bdr:#1a2438;--bdr2:#243050;--cyan:#00e5ff;--pur:#8b5cf6;--grn:#10b981;--amb:#f59e0b;--red:#ef4444;--blu:#3b82f6;--txt:#e2e8f0;--txt2:#94a3b8;--txt3:#4a5568}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--txt);font-family:'JetBrains Mono',monospace;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+header{height:52px;background:var(--bg2);border-bottom:1px solid var(--bdr);display:flex;align-items:center;padding:0 18px;gap:14px;flex-shrink:0}
+.logo{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--cyan)}.logo span{color:var(--txt2)}
+.htabs{display:flex;gap:2px;background:var(--bg3);border:1px solid var(--bdr);border-radius:6px;padding:3px;margin:0 auto}
+.htab{background:none;border:none;color:var(--txt3);font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;padding:5px 16px;border-radius:4px;cursor:pointer;transition:all .2s}
+.htab.active{background:var(--cyan);color:#000}.htab:hover:not(.active){color:var(--txt);background:var(--bdr)}
+.hright{display:flex;align-items:center;gap:10px;margin-left:auto}
+.status{font-size:10px;color:var(--txt3);display:flex;align-items:center;gap:5px}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--grn);animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.breset{background:var(--bg3);border:1px solid var(--bdr2);color:var(--txt2);font-family:'JetBrains Mono',monospace;font-size:10px;padding:5px 12px;border-radius:5px;cursor:pointer;transition:all .2s}.breset:hover{border-color:var(--red);color:var(--red)}
+.layout{display:flex;flex:1;overflow:hidden}
+.sb{width:242px;background:var(--panel);border-right:1px solid var(--bdr);overflow-y:auto;flex-shrink:0}
+.sec{border-bottom:1px solid var(--bdr);padding:13px}
+.sl{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--txt3);margin-bottom:9px}
+input[type=text],input[type=number],select{background:var(--bg2);border:1px solid var(--bdr);color:var(--txt);font-family:'JetBrains Mono',monospace;font-size:11px;padding:6px 9px;border-radius:5px;width:100%;outline:none;transition:border-color .2s;margin-bottom:6px}
+input:focus,select:focus{border-color:var(--cyan)}select option{background:var(--bg2)}
+.btn{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;padding:7px;border-radius:5px;border:none;cursor:pointer;transition:all .2s;width:100%;display:block}
+.bc{background:var(--cyan);color:#000}.bc:hover{background:#00bcd4}
+.bp{background:var(--pur);color:#fff}.bp:hover{background:#7c3aed}
+.bg{background:var(--grn);color:#000}.bg:hover{background:#059669}
+.ba{background:var(--amb);color:#000}.ba:hover{background:#d97706}
+.bbr{background:#0e7490;color:#fff}.bbr:hover{background:#0891b2}
+.bsm{background:var(--bg3);border:1px solid var(--bdr2);color:var(--txt2);font-size:10px;padding:5px 8px;width:auto}.bsm:hover{border-color:var(--cyan);color:var(--cyan)}
+.irow{display:flex;gap:5px;margin-bottom:6px}.irow input{margin-bottom:0}
+.tbtn{width:100%;text-align:left;background:var(--bg2);border:1px solid var(--bdr);color:var(--txt2);font-family:'JetBrains Mono',monospace;font-size:10px;padding:8px 10px;border-radius:5px;cursor:pointer;margin-bottom:4px;transition:all .2s;display:flex;align-items:center;gap:7px}
+.tbtn:hover{border-color:var(--cyan);color:var(--txt);background:var(--bg3)}
+.badge{font-size:8px;font-weight:700;padding:2px 5px;border-radius:3px;flex-shrink:0}
+.bphy{background:rgba(0,229,255,.15);color:var(--cyan)}.bdl{background:rgba(139,92,246,.2);color:#a78bfa}.bfc{background:rgba(16,185,129,.15);color:var(--grn)}.berr{background:rgba(239,68,68,.18);color:var(--red)}.bbadge{background:rgba(14,116,144,.25);color:#22d3ee}
+.ca{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
+.cbar{background:var(--bg2);border-bottom:1px solid var(--bdr);padding:7px 14px;display:flex;align-items:center;font-size:10px;color:var(--txt3);flex-shrink:0}
+#cvs{flex:1;position:relative;overflow:hidden;background:radial-gradient(ellipse at 20% 20%,rgba(0,229,255,.03) 0,transparent 55%),radial-gradient(ellipse at 80% 80%,rgba(139,92,246,.04) 0,transparent 55%),var(--bg)}
+.grid{position:absolute;inset:0;background-image:linear-gradient(rgba(26,36,56,.5) 1px,transparent 1px),linear-gradient(90deg,rgba(26,36,56,.5) 1px,transparent 1px);background-size:40px 40px;pointer-events:none}
+svg#wires{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+#nodes{position:absolute;inset:0}
+.emsg{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;color:var(--txt3);pointer-events:none}
+.emsg .ei{font-size:44px;opacity:.2}.emsg .et{font-size:13px}.emsg .es{font-size:10px;opacity:.6}
+.node{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;transition:transform .15s;user-select:none;z-index:5}
+.node:hover{transform:translate(-50%,-50%) scale(1.1)}
+.nb{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;border:2px solid transparent;transition:all .25s}
+.node.device .nb{background:rgba(0,229,255,.1);border-color:rgba(0,229,255,.25)}
+.node.hub    .nb{background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3);border-radius:50%}
+.node.switch .nb{background:rgba(139,92,246,.1);border-color:rgba(139,92,246,.3);border-radius:6px}
+.node.bridge .nb{background:rgba(14,116,144,.12);border-color:rgba(14,116,144,.4);border-radius:8px}
+.node.selected .nb{border-color:var(--cyan);box-shadow:0 0 16px rgba(0,229,255,.45)}
+.nl{font-size:10px;font-weight:600;color:var(--txt2);white-space:nowrap}.nm{font-size:8px;color:var(--txt3)}
+.node.pulse .nb{animation:np .7s ease-out}
+@keyframes np{0%{box-shadow:0 0 0 0 rgba(0,229,255,.8)}100%{box-shadow:0 0 0 22px rgba(0,229,255,0)}}
+.pkt{position:absolute;border-radius:50%;pointer-events:none;z-index:20;transform:translate(-50%,-50%)}
+.pu{width:10px;height:10px;background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
+.pb{width:12px;height:12px;background:var(--amb);box-shadow:0 0 12px var(--amb)}
+.pm{width:10px;height:10px;background:var(--grn);box-shadow:0 0 10px var(--grn)}
+.ibar{background:var(--bg2);border-top:1px solid var(--bdr);padding:5px 14px;display:flex;align-items:center;gap:16px;font-size:10px;color:var(--txt3);flex-shrink:0}
+.iv{color:var(--txt2);font-weight:600}
+.overlay{position:absolute;inset:0;background:rgba(8,12,20,.8);display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;z-index:50}.overlay.show{display:flex}
+.spinner{width:28px;height:28px;border:2px solid var(--bdr);border-top-color:var(--cyan);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.rp{width:334px;background:var(--panel);border-left:1px solid var(--bdr);display:flex;flex-direction:column;flex-shrink:0}
+.ptabs{display:flex;border-bottom:1px solid var(--bdr);flex-shrink:0}
+.ptab{flex:1;padding:10px 4px;background:none;border:none;border-bottom:2px solid transparent;color:var(--txt3);font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;cursor:pointer;transition:all .2s}
+.ptab.active{color:var(--cyan);border-bottom-color:var(--cyan)}.ptab:hover:not(.active){color:var(--txt2)}
+.pc{flex:1;overflow-y:auto;padding:12px}
+.ps{display:none}.ps.active{display:block}
+.lhdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.lcnt{font-size:10px;color:var(--txt3)}
+.bclr{font-size:9px;background:none;border:1px solid var(--bdr);color:var(--txt3);padding:3px 7px;border-radius:4px;cursor:pointer;font-family:'JetBrains Mono',monospace}.bclr:hover{border-color:var(--red);color:var(--red)}
+.log{display:flex;gap:7px;padding:5px 7px;border-radius:5px;margin-bottom:3px;font-size:10px;border-left:2px solid transparent;animation:fi .2s ease}
+@keyframes fi{from{opacity:0;transform:translateY(-2px)}to{opacity:1}}
+.log.SEND,.log.INFO{background:rgba(0,229,255,.04);border-left-color:rgba(0,229,255,.5)}
+.log.RECEIVE{background:rgba(16,185,129,.07);border-left-color:var(--grn)}
+.log.BROADCAST{background:rgba(245,158,11,.06);border-left-color:var(--amb)}
+.log.MULTICAST{background:rgba(59,130,246,.07);border-left-color:var(--blu)}
+.log.HUB{background:rgba(245,158,11,.05);border-left-color:rgba(245,158,11,.55)}
+.log.SWITCH{background:rgba(139,92,246,.07);border-left-color:var(--pur)}
+.log.BRIDGE{background:rgba(14,116,144,.07);border-left-color:#0e7490}
+.log.MAC_LEARN{background:rgba(139,92,246,.05);border-left-color:#a78bfa}
+.log.CRC_OK,.log.CSMA_OK,.log.FLOW_DONE,.log.SUMMARY{background:rgba(16,185,129,.06);border-left-color:var(--grn)}
+.log.CRC_FAIL,.log.CORRUPT,.log.COLLISION,.log.FLOW_LOST,.log.FLOW_RETRANS{background:rgba(239,68,68,.08);border-left-color:var(--red)}
+.log.FLOW_SEND,.log.FLOW_START{background:rgba(0,229,255,.04);border-left-color:rgba(0,229,255,.4)}
+.log.FLOW_ACK{background:rgba(16,185,129,.04);border-left-color:rgba(16,185,129,.5)}
+.log.CONNECT,.log.TOPOLOGY{background:rgba(16,185,129,.03);border-left-color:rgba(16,185,129,.3)}
+.log.DISCARD{background:rgba(74,85,104,.05);border-left-color:var(--txt3)}
+.log.TEST,.log.FLOW_INFO,.log.PARITY{background:rgba(255,255,255,.03);border-left-color:var(--txt3)}
+.log.CSMA{background:rgba(245,158,11,.04);border-left-color:rgba(245,158,11,.4)}
+.lbg{font-size:8px;font-weight:700;padding:1px 4px;border-radius:3px;min-width:64px;text-align:center;flex-shrink:0;align-self:flex-start;margin-top:1px;background:rgba(255,255,255,.07);color:var(--txt2)}
+.log.RECEIVE .lbg{background:rgba(16,185,129,.22);color:var(--grn)}
+.log.BROADCAST .lbg{background:rgba(245,158,11,.22);color:var(--amb)}
+.log.MULTICAST .lbg{background:rgba(59,130,246,.22);color:var(--blu)}
+.log.HUB .lbg{background:rgba(245,158,11,.2);color:var(--amb)}
+.log.SWITCH .lbg{background:rgba(139,92,246,.22);color:#a78bfa}
+.log.BRIDGE .lbg{background:rgba(14,116,144,.28);color:#22d3ee}
+.log.MAC_LEARN .lbg{background:rgba(139,92,246,.18);color:#a78bfa}
+.log.CRC_OK .lbg,.log.CSMA_OK .lbg,.log.FLOW_DONE .lbg,.log.SUMMARY .lbg{background:rgba(16,185,129,.22);color:var(--grn)}
+.log.CRC_FAIL .lbg,.log.CORRUPT .lbg,.log.COLLISION .lbg,.log.FLOW_LOST .lbg,.log.FLOW_RETRANS .lbg{background:rgba(239,68,68,.22);color:var(--red)}
+.log.FLOW_SEND .lbg,.log.FLOW_START .lbg,.log.SEND .lbg,.log.INFO .lbg{background:rgba(0,229,255,.18);color:var(--cyan)}
+.log.FLOW_ACK .lbg{background:rgba(16,185,129,.18);color:var(--grn)}
+.log.CSMA .lbg{background:rgba(245,158,11,.18);color:var(--amb)}
+.lmsg{color:var(--txt2);line-height:1.4;flex:1}
+.ltime{color:var(--txt3);font-size:8px;flex-shrink:0;align-self:flex-start;margin-top:1px}
+.lempty{text-align:center;color:var(--txt3);font-size:11px;padding:28px 0}
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:11px}
+.sc{background:var(--bg2);border:1px solid var(--bdr);border-radius:7px;padding:9px}
+.sv{font-size:22px;font-weight:700;color:var(--cyan);font-family:'Syne',sans-serif}.sl2{font-size:9px;color:var(--txt3);margin-top:2px}
+.dom{background:var(--bg2);border:1px solid var(--bdr);border-radius:7px;padding:9px;margin-bottom:7px}
+.dt{font-size:9px;color:var(--txt3);margin-bottom:4px}.dv{font-size:20px;font-weight:700}.dv.cd{color:var(--red)}.dv.bd{color:var(--amb)}
+.mwrap{margin-top:10px}.mhdr{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--txt3);margin-bottom:5px}
+.mrow{display:flex;justify-content:space-between;padding:4px 7px;background:var(--bg2);border-radius:4px;margin-bottom:2px;font-size:9px}.ma{color:var(--cyan)}.mp{color:var(--amb)}
+.dc{background:var(--bg2);border:1px solid var(--bdr);border-radius:7px;padding:8px;margin-bottom:5px;cursor:pointer;transition:border-color .2s}.dc:hover{border-color:var(--cyan)}
+.dch{display:flex;align-items:center;gap:6px;margin-bottom:2px}.dn{font-size:11px;font-weight:600}
+.dtype{font-size:8px;font-weight:700;padding:2px 5px;border-radius:3px;margin-left:auto}
+.dte{background:rgba(0,229,255,.15);color:var(--cyan)}.dth{background:rgba(245,158,11,.15);color:var(--amb)}.dts{background:rgba(139,92,246,.2);color:#a78bfa}.dtb{background:rgba(14,116,144,.2);color:#22d3ee}
+.dmi{font-size:9px;color:var(--txt3)}
+#toast{position:fixed;bottom:16px;right:16px;background:var(--panel);border:1px solid var(--bdr2);color:var(--txt);font-family:'JetBrains Mono',monospace;font-size:11px;padding:8px 14px;border-radius:7px;z-index:999;transform:translateY(50px);opacity:0;transition:all .3s;max-width:300px}
+#toast.show{transform:translateY(0);opacity:1}#toast.success{border-color:var(--grn)}#toast.error{border-color:var(--red)}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--bdr2);border-radius:2px}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">Net<span>Sim</span></div>
+  <div class="htabs">
+    <button class="htab active" onclick="setTab('build')">Build</button>
+    <button class="htab" onclick="setTab('transmit')">Transmit</button>
+    <button class="htab" onclick="setTab('protocols')">Protocols</button>
+  </div>
+  <div class="hright">
+    <div class="status"><div class="dot"></div>Simulator Running</div>
+    <button class="breset" onclick="doReset()">↺ Reset</button>
+  </div>
+</header>
+
+<div class="layout">
+<div class="sb">
+
+<div id="tab-build">
+<div class="sec">
+  <div class="sl">Add Device</div>
+  <input type="text" id="d-name" placeholder="PC1, Server1...">
+  <select id="d-group">
+    <option value="">No multicast group</option>
+    <option value="VideoGroup">📡 VideoGroup</option>
+    <option value="DataGroup">📡 DataGroup</option>
+  </select>
+  <button class="btn bc" onclick="addDevice()">+ Add Device</button>
+</div>
+<div class="sec">
+  <div class="sl">Add Hub</div>
+  <div class="irow">
+    <input type="text" id="h-name" placeholder="HUB1..." style="flex:1;margin-bottom:0">
+    <input type="number" id="h-ports" value="8" min="2" max="16" style="width:52px;margin-bottom:0">
+  </div>
+  <button class="btn ba" style="margin-top:6px" onclick="addHub()">+ Add Hub</button>
+</div>
+<div class="sec">
+  <div class="sl">Add Switch</div>
+  <div class="irow">
+    <input type="text" id="s-name" placeholder="SW1..." style="flex:1;margin-bottom:0">
+    <input type="number" id="s-ports" value="8" min="2" max="16" style="width:52px;margin-bottom:0">
+  </div>
+  <button class="btn bp" style="margin-top:6px" onclick="addSwitch()">+ Add Switch</button>
+</div>
+<div class="sec">
+  <div class="sl">Add Bridge</div>
+  <input type="text" id="br-name" placeholder="BR1, BR2...">
+  <button class="btn bbr" onclick="addBridge()">+ Add Bridge</button>
+</div>
+<div class="sec">
+  <div class="sl">Connect</div>
+  <select id="c-src" style="margin-bottom:5px"><option value="">Source...</option></select>
+  <select id="c-type" onchange="refreshTargets()" style="margin-bottom:5px">
+    <option value="device_hub">Device → Hub</option>
+    <option value="device_switch">Device → Switch</option>
+    <option value="device_bridge">Device → Bridge</option>
+    <option value="hub_switch">Hub → Switch</option>
+    <option value="hub_bridge">Hub → Bridge</option>
+  </select>
+  <select id="c-dst" style="margin-bottom:8px"><option value="">Target...</option></select>
+  <button class="btn bg" onclick="connectNodes()">⟶ Connect</button>
+</div>
+</div>
+
+<div id="tab-transmit" style="display:none">
+<div class="sec">
+  <div class="sl">Send Frame</div>
+  <select id="t-src" style="margin-bottom:5px"><option value="">Source device...</option></select>
+  <select id="t-type" onchange="toggleDst()" style="margin-bottom:5px">
+    <option value="unicast">🔵 Unicast (PC → PC)</option>
+    <option value="broadcast">📢 Broadcast (→ ALL)</option>
+    <option value="multicast">📡 Multicast (→ Group)</option>
+  </select>
+  <select id="t-dst" style="margin-bottom:5px"><option value="">Destination...</option></select>
+  <input type="text" id="t-msg" value="Hello World!" style="margin-bottom:8px">
+  <button class="btn bc" onclick="sendFrame()">→ Send Frame</button>
+</div>
+</div>
+
+<div id="tab-protocols" style="display:none">
+<div class="sec">
+  <div class="sl">Flow Control</div>
+  <div style="font-size:9px;color:var(--txt3);margin-bottom:6px">Mode:</div>
+  <div style="display:flex;gap:5px;margin-bottom:9px">
+    <button id="gbn-btn" class="btn bp" onclick="setFlow('GBN')" style="flex:1;font-size:10px">Go-Back-N</button>
+    <button id="sr-btn"  class="btn bsm" onclick="setFlow('SR')"  style="flex:1;font-size:10px">Sel.Repeat</button>
+  </div>
+  <div style="font-size:9px;color:var(--txt3);margin-bottom:4px">Window Size:</div>
+  <input type="number" id="win" value="4" min="1" max="8" style="margin-bottom:8px">
+  <button class="btn bp" onclick="runFlow()">▶ Run Flow Control</button>
+</div>
+</div>
+
+<div class="sec">
+  <div class="sl">Quick Test Cases</div>
+  <button class="tbtn" onclick="runTest('p2p')"><span class="badge bphy">PHY</span>0. PC → PC Direct (P2P)</button>
+  <button class="tbtn" onclick="runTest('unicast')"><span class="badge bphy">PHY</span>1. Unicast via Hub</button>
+  <button class="tbtn" onclick="runTest('broadcast')"><span class="badge bphy">PHY</span>2. Broadcast (→ ALL)</button>
+  <button class="tbtn" onclick="runTest('multicast')"><span class="badge bphy">PHY</span>3. Multicast (→ Group)</button>
+  <button class="tbtn" onclick="runTest('switch_mac')"><span class="badge bdl">DL</span>4. Switch MAC Learning</button>
+  <button class="tbtn" onclick="runTest('dual_star')"><span class="badge bdl">DL</span>5. Dual Star via Switch</button>
+  <button class="tbtn" onclick="runTest('bridge')"><span class="badge bbadge">BR</span>6. Bridge (2 segments)</button>
+  <button class="tbtn" onclick="runTest('error_control')"><span class="badge berr">ERR</span>7. Error Control CRC</button>
+  <button class="tbtn" onclick="runTest('csmacd')"><span class="badge berr">ACC</span>8. CSMA/CD Protocol</button>
+  <button class="tbtn" onclick="quickFlow('GBN')"><span class="badge bfc">FC</span>9a. Flow Control GBN</button>
+  <button class="tbtn" onclick="quickFlow('SR')"><span class="badge bfc">FC</span>9b. Flow Control SR</button>
+</div>
+</div>
+
+<div class="ca">
+  <div class="cbar">
+    <span style="font-weight:600;color:var(--txt2)">NETWORK TOPOLOGY</span>
+    <span style="margin-left:auto;font-size:9px">🖱 Drag nodes • Click to select</span>
+  </div>
+  <div id="cvs">
+    <div class="grid"></div>
+    <svg id="wires"></svg>
+    <div id="nodes"></div>
+    <div class="emsg" id="emsg">
+      <div class="ei">🌐</div>
+      <div class="et">Canvas is empty</div>
+      <div class="es">Add devices from sidebar or click a Quick Test</div>
+    </div>
+    <div class="overlay" id="loader">
+      <div class="spinner"></div>
+      <div style="font-size:11px;color:var(--txt2)">Simulating...</div>
+    </div>
+  </div>
+  <div class="ibar">
+    <span>Devices: <span class="iv" id="ib-d">0</span></span>
+    <span>Hubs: <span class="iv" id="ib-h">0</span></span>
+    <span>Switches: <span class="iv" id="ib-s">0</span></span>
+    <span>Bridges: <span class="iv" id="ib-br">0</span></span>
+    <span>CD: <span class="iv" id="ib-cd">0</span></span>
+    <span>BD: <span class="iv" id="ib-bd">0</span></span>
+  </div>
+</div>
+
+<div class="rp">
+  <div class="ptabs">
+    <button class="ptab active" onclick="showPanel('logs',this)">Logs</button>
+    <button class="ptab" onclick="showPanel('stats',this)">Stats</button>
+    <button class="ptab" onclick="showPanel('devs',this)">Devices</button>
+  </div>
+  <div class="pc">
+    <div class="ps active" id="p-logs">
+      <div class="lhdr"><span class="lcnt" id="lcnt">0 events</span><button class="bclr" onclick="clearLogs()">Clear</button></div>
+      <div id="loglist"></div>
+      <div class="lempty" id="lempty">No events yet. Run a Quick Test to start!</div>
+    </div>
+    <div class="ps" id="p-stats">
+      <div class="sgrid">
+        <div class="sc"><div class="sv" id="st-d">0</div><div class="sl2">END DEVICES</div></div>
+        <div class="sc"><div class="sv" id="st-f">0</div><div class="sl2">FRAMES SENT</div></div>
+      </div>
+      <div class="dom"><div class="dt">COLLISION DOMAINS</div><div class="dv cd" id="st-cd">0</div><div style="font-size:9px;color:var(--txt3);margin-top:3px">Switch:1/port | Hub:1 total | Bridge:1/segment</div></div>
+      <div class="dom"><div class="dt">BROADCAST DOMAINS</div><div class="dv bd" id="st-bd">0</div><div style="font-size:9px;color:var(--txt3);margin-top:3px">Switch/Hub/Bridge = 1 domain</div></div>
+      <div class="mwrap" id="mwrap" style="display:none"><div class="mhdr">Switch MAC Table</div><div id="mrows"></div></div>
+    </div>
+    <div class="ps" id="p-devs"><div id="devlist"><div class="lempty">No devices yet.</div></div></div>
+  </div>
+</div>
+</div>
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════
+// STATE & API
+// ═══════════════════════════════════════════════
+let S={topo:null,logs:[],flow:'GBN'};
+const drag={};
+
+async function api(url,method='GET',body=null){
+  const o={method,headers:{'Content-Type':'application/json'}};
+  if(body)o.body=JSON.stringify(body);
+  return (await fetch('/api/'+url,o)).json();
+}
+async function init(){updateAll(await api('topology'));}
+
+// ═══════════════════════════════════════════════
+// TABS & PANELS
+// ═══════════════════════════════════════════════
+function setTab(t){
+  ['build','transmit','protocols'].forEach(x=>document.getElementById('tab-'+x).style.display=x===t?'block':'none');
+  document.querySelectorAll('.htab').forEach((b,i)=>b.classList.toggle('active',['build','transmit','protocols'][i]===t));
+}
+function showPanel(p,btn){
+  document.querySelectorAll('.ptab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.ps').forEach(s=>s.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('p-'+p).classList.add('active');
+}
+function goLogs(){
+  document.querySelectorAll('.ptab').forEach((b,i)=>b.classList.toggle('active',i===0));
+  document.querySelectorAll('.ps').forEach(s=>s.classList.remove('active'));
+  document.getElementById('p-logs').classList.add('active');
+}
+
+// ═══════════════════════════════════════════════
+// BUILD
+// ═══════════════════════════════════════════════
+async function addDevice(){
+  const n=document.getElementById('d-name').value.trim();
+  const g=document.getElementById('d-group').value||null;
+  if(!n)return toast('Enter device name','error');
+  const r=await api('add_device','POST',{name:n,multicast_group:g});
+  if(r.error)return toast(r.error,'error');
+  document.getElementById('d-name').value='';
+  updateAll(r.topology);toast(n+' added ✓');
+}
+async function addHub(){
+  const n=document.getElementById('h-name').value.trim(),p=+document.getElementById('h-ports').value;
+  if(!n)return toast('Enter hub name','error');
+  const r=await api('add_hub','POST',{name:n,ports:p});
+  if(r.error)return toast(r.error,'error');
+  document.getElementById('h-name').value='';
+  updateAll(r.topology);toast('Hub '+n+' added ✓');
+}
+async function addSwitch(){
+  const n=document.getElementById('s-name').value.trim(),p=+document.getElementById('s-ports').value;
+  if(!n)return toast('Enter switch name','error');
+  const r=await api('add_switch','POST',{name:n,ports:p});
+  if(r.error)return toast(r.error,'error');
+  document.getElementById('s-name').value='';
+  updateAll(r.topology);toast('Switch '+n+' added ✓');
+}
+async function addBridge(){
+  const n=document.getElementById('br-name').value.trim();
+  if(!n)return toast('Enter bridge name','error');
+  const r=await api('add_bridge','POST',{name:n});
+  if(r.error)return toast(r.error,'error');
+  document.getElementById('br-name').value='';
+  updateAll(r.topology);toast('Bridge '+n+' added ✓');
+}
+function refreshTargets(){
+  const type=document.getElementById('c-type').value,t=S.topo;
+  if(!t)return;
+  const se=document.getElementById('c-src'),de=document.getElementById('c-dst');
+  se.innerHTML='<option value="">Source...</option>';
+  de.innerHTML='<option value="">Target...</option>';
+  if(type==='hub_switch'){t.hubs.forEach(h=>se.innerHTML+=`<option>${h.name}</option>`);t.switches.forEach(s=>de.innerHTML+=`<option>${s.name}</option>`);}
+  else if(type==='hub_bridge'){t.hubs.forEach(h=>se.innerHTML+=`<option>${h.name}</option>`);(t.bridges||[]).forEach(b=>de.innerHTML+=`<option>${b.name}</option>`);}
+  else if(type==='device_hub'){t.devices.forEach(d=>se.innerHTML+=`<option>${d.name}</option>`);t.hubs.forEach(h=>de.innerHTML+=`<option>${h.name}</option>`);}
+  else if(type==='device_switch'){t.devices.forEach(d=>se.innerHTML+=`<option>${d.name}</option>`);t.switches.forEach(s=>de.innerHTML+=`<option>${s.name}</option>`);}
+  else if(type==='device_bridge'){t.devices.forEach(d=>se.innerHTML+=`<option>${d.name}</option>`);(t.bridges||[]).forEach(b=>de.innerHTML+=`<option>${b.name}</option>`);}
+}
+async function connectNodes(){
+  const src=document.getElementById('c-src').value,dst=document.getElementById('c-dst').value,type=document.getElementById('c-type').value;
+  if(!src||!dst)return toast('Select source and target','error');
+  const r=await api('connect','POST',{src,dst,type});
+  if(r.error)return toast(r.error,'error');
+  updateAll(r.topology);toast('Connected ✓');
+}
+
+// ═══════════════════════════════════════════════
+// TRANSMIT
+// ═══════════════════════════════════════════════
+function toggleDst(){
+  document.getElementById('t-dst').style.opacity=document.getElementById('t-type').value==='unicast'?'1':'0.4';
+}
+async function sendFrame(){
+  const src=document.getElementById('t-src').value,dst=document.getElementById('t-dst').value;
+  const msg=document.getElementById('t-msg').value.trim(),type=document.getElementById('t-type').value;
+  if(!src)return toast('Select source device','error');
+  if(type==='unicast'&&!dst)return toast('Select destination','error');
+  if(!msg)return toast('Enter message','error');
+  load(1);
+  const r=await api('send','POST',{src,dst,message:msg,send_type:type});
+  load(0);
+  if(r.error)return toast(r.error,'error');
+  updateAll(r.topology);
+  if(r.logs)updateLogs(r.logs);
+  animateSend(src,type,r.receivers||[]);
+  toast(`[${type}] "${msg}" → ${r.receivers?.join(', ')||'none'}`);
+  goLogs();
+}
+
+// ═══════════════════════════════════════════════
+// PROTOCOLS
+// ═══════════════════════════════════════════════
+function setFlow(m){
+  S.flow=m;
+  document.getElementById('gbn-btn').className='btn '+(m==='GBN'?'bp':'bsm');
+  document.getElementById('sr-btn').className='btn '+(m==='SR'?'bp':'bsm');
+}
+async function runFlow(){
+  const ws=+document.getElementById('win').value;
+  load(1);
+  const r=await api('test/flow_control','POST',{mode:S.flow,window_size:ws});
+  load(0);
+  if(r.logs)updateLogs(r.logs);
+  goLogs();
+  toast(`Flow (${S.flow}) — ${r.result?.delivered}/${r.result?.total_frames} frames`);
+}
+async function quickFlow(mode){
+  load(1);
+  const r=await api('test/flow_control','POST',{mode,window_size:4});
+  load(0);
+  updateAll(r.topology);
+  if(r.logs)updateLogs(r.logs);
+  goLogs();
+  toast(`Flow (${mode}) — ${r.result?.delivered}/${r.result?.total_frames} frames`);
+}
+
+// ═══════════════════════════════════════════════
+// TESTS
+// ═══════════════════════════════════════════════
+async function runTest(name){
+  Object.keys(drag).forEach(k=>delete drag[k]);
+  load(1);
+  const r=await api('test/'+name,'POST',{});
+  load(0);
+  updateAll(r.topology);
+  if(r.logs)updateLogs(r.logs);
+  goLogs();
+  toast('Test done — see Logs ✓');
+}
+async function doReset(){
+  await api('reset','POST');
+  Object.keys(drag).forEach(k=>delete drag[k]);
+  S.logs=[];
+  updateAll({devices:[],hubs:[],switches:[],bridges:[],hub_switch_links:[],total_collision_domains:0,total_broadcast_domains:0});
+  updateLogs([]);toast('Reset ✓');
+}
+function clearLogs(){S.logs=[];updateLogs([]);}
+
+// ═══════════════════════════════════════════════
+// UPDATE ALL
+// ═══════════════════════════════════════════════
+function updateAll(t){
+  if(!t)return;S.topo=t;
+  renderCanvas(t);updateInfoBar(t);updateStats(t);updateDevList(t);updateSelects(t);
+}
+function updateLogs(logs){
+  S.logs=logs;
+  const list=document.getElementById('loglist'),empty=document.getElementById('lempty');
+  document.getElementById('lcnt').textContent=logs.length+' events';
+  empty.style.display=logs.length?'none':'block';
+  list.innerHTML='';
+  logs.slice().reverse().forEach(log=>{
+    const ev=log.event_type||'INFO';
+    const d=document.createElement('div');
+    d.className='log '+ev;
+    d.innerHTML=`<span class="lbg">${ev}</span><span class="lmsg">${log.message}</span><span class="ltime">${log.time_str}</span>`;
+    list.appendChild(d);
+  });
+  list.parentElement.scrollTop=0;
+}
+
+// ═══════════════════════════════════════════════
+// CANVAS LAYOUT
+// ═══════════════════════════════════════════════
+function calcPos(t,W,H){
+  const pos={},cx=W/2,cy=H/2;
+  const hubs=t.hubs||[],sws=t.switches||[],devs=t.devices||[],brs=t.bridges||[];
+
+  function star(c,names,r,a0=-Math.PI/2,span=2*Math.PI){
+    names.forEach((n,i)=>{
+      if(drag[n]){pos[n]=drag[n];return;}
+      const a=names.length===1?a0:a0+(i/(names.length-1))*span;
+      pos[n]={x:c.x+Math.cos(a)*r,y:c.y+Math.sin(a)*r};
+    });
+  }
+
+  // pure P2P: 2 devices, no hub/switch/bridge
+  if(devs.length===2&&hubs.length===0&&sws.length===0&&brs.length===0){
+    pos[devs[0].name]=drag[devs[0].name]||{x:cx-160,y:cy};
+    pos[devs[1].name]=drag[devs[1].name]||{x:cx+160,y:cy};
+    return pos;
+  }
+
+  // dual star: 2 hubs + 1 switch
+  if(sws.length===1&&hubs.length===2&&brs.length===0){
+    const sw=sws[0]; pos[sw.name]=drag[sw.name]||{x:cx,y:cy};
+    hubs.forEach((h,i)=>{
+      const ang=i===0?Math.PI:0,hd=Math.min(W,H)*.27;
+      const hp=drag[h.name]||{x:cx+Math.cos(ang)*hd,y:cy+Math.sin(ang)*30};
+      pos[h.name]=hp;
+      star(hp,h.connected_devices.map(d=>d.device),Math.min(W,H)*.19,ang-Math.PI/2,Math.PI);
+    });
+    return pos;
+  }
+
+  // bridge test: 2 hubs + 1 bridge
+  if(brs.length===1&&hubs.length===2&&sws.length===0){
+    const br=brs[0]; pos[br.name]=drag[br.name]||{x:cx,y:cy};
+    hubs.forEach((h,i)=>{
+      const ang=i===0?Math.PI:0,hd=Math.min(W,H)*.27;
+      const hp=drag[h.name]||{x:cx+Math.cos(ang)*hd,y:cy};
+      pos[h.name]=hp;
+      star(hp,h.connected_devices.map(d=>d.device),Math.min(W,H)*.19,ang-Math.PI/2,Math.PI);
+    });
+    return pos;
+  }
+
+  // single hub star
+  if(hubs.length>=1&&sws.length===0&&brs.length===0){
+    hubs.forEach((h,i)=>{
+      const hc={x:cx+(i-(hubs.length-1)/2)*260,y:cy};
+      pos[h.name]=drag[h.name]||hc;
+      star(pos[h.name],h.connected_devices.map(d=>d.device),Math.min(W,H)*.30);
+    });
+    return pos;
+  }
+
+  // single switch star
+  if(sws.length===1&&hubs.length===0&&brs.length===0){
+    const sw=sws[0]; pos[sw.name]=drag[sw.name]||{x:cx,y:cy};
+    star(pos[sw.name],sw.connected_devices.filter(d=>d.type!=='hub').map(d=>d.device),Math.min(W,H)*.32);
+    return pos;
+  }
+
+  // fallback: circle
+  const all=[...devs,...hubs,...sws,...brs],r=Math.min(W,H)*.36;
+  all.forEach((n,i)=>{
+    if(drag[n.name]){pos[n.name]=drag[n.name];return;}
+    const a=(i/all.length)*2*Math.PI-Math.PI/2;
+    pos[n.name]={x:cx+Math.cos(a)*r,y:cy+Math.sin(a)*r};
+  });
+  return pos;
+}
+
+// ═══════════════════════════════════════════════
+// RENDER CANVAS
+// ═══════════════════════════════════════════════
+function renderCanvas(t){
+  const cvs=document.getElementById('cvs'),nd=document.getElementById('nodes'),svg=document.getElementById('wires');
+  const emsg=document.getElementById('emsg');
+  const all=[...(t.devices||[]),...(t.hubs||[]),...(t.switches||[]),...(t.bridges||[])];
+  emsg.style.display=all.length?'none':'flex';
+  nd.innerHTML='';svg.innerHTML='';
+  if(!all.length)return;
+
+  const W=cvs.offsetWidth||800,H=cvs.offsetHeight||500;
+  const pos=calcPos(t,W,H);
+
+  function wire(a,b,cls,id){
+    if(!a||!b)return;
+    const l=document.createElementNS('http://www.w3.org/2000/svg','line');
+    l.setAttribute('x1',a.x);l.setAttribute('y1',a.y);l.setAttribute('x2',b.x);l.setAttribute('y2',b.y);
+    l.setAttribute('class',cls);if(id)l.id=id;svg.appendChild(l);
+  }
+
+  // p2p direct wires
+  (t.p2p_links||[]).forEach(lk=>{
+    wire(pos[lk.from],pos[lk.to],'w-p2p','w-'+lk.from+'-'+lk.to);
+  });
+  // hub wires
+  (t.hubs||[]).forEach(h=>{
+    h.connected_devices.forEach(cd=>wire(pos[h.name],pos[cd.device],'w-hub','w-'+h.name+'-'+cd.device));
+  });
+  // switch wires
+  (t.switches||[]).forEach(sw=>{
+    sw.connected_devices.forEach(cd=>{
+      wire(pos[sw.name],pos[cd.device],cd.type==='hub'?'w-trunk':'w-sw','w-'+sw.name+'-'+cd.device);
+    });
+  });
+  // hub-switch / hub-bridge links
+  (t.hub_switch_links||[]).forEach(lk=>{
+    const cls=lk.ttype==='bridge'?'w-br':'w-trunk';
+    wire(pos[lk.from],pos[lk.to],cls,'w-'+lk.from+'-'+lk.to);
+  });
+
+  // nodes
+  all.forEach(node=>{
+    const p=pos[node.name];if(!p)return;
+    const isHub=!!(t.hubs||[]).find(h=>h.name===node.name);
+    const isSw=!!(t.switches||[]).find(s=>s.name===node.name);
+    const isBr=!!(t.bridges||[]).find(b=>b.name===node.name);
+    const type=isHub?'hub':isSw?'switch':isBr?'bridge':'device';
+    const icon=isHub?'🔵':isSw?'🔲':isBr?'🌉':'💻';
+    const el=document.createElement('div');
+    el.className='node '+type;el.id='node-'+node.name;
+    el.style.left=p.x+'px';el.style.top=p.y+'px';
+    const mac=node.mac?node.mac.substring(0,11)+'…':'';
+    el.innerHTML=`<div class="nb">${icon}</div><div class="nl">${node.name}</div>${mac?`<div class="nm">${mac}</div>`:''}`;
+    el.onclick=()=>{document.querySelectorAll('.node').forEach(n=>n.classList.remove('selected'));el.classList.add('selected');};
+    makeDrag(el,node.name);nd.appendChild(el);
+  });
+}
+
+// wire CSS
+const ws=document.createElement('style');
+ws.textContent=`
+.w-p2p{stroke:var(--cyan);stroke-width:2.5;stroke-linecap:round}
+.w-hub{stroke:rgba(245,158,11,.55);stroke-width:2;stroke-linecap:round}
+.w-sw{stroke:rgba(139,92,246,.55);stroke-width:2;stroke-linecap:round}
+.w-trunk{stroke:rgba(139,92,246,.75);stroke-width:3;stroke-linecap:round;stroke-dasharray:8 4}
+.w-br{stroke:rgba(14,116,144,.8);stroke-width:3;stroke-linecap:round;stroke-dasharray:6 3}
+`;
+document.head.appendChild(ws);
+
+// ═══════════════════════════════════════════════
+// DRAG
+// ═══════════════════════════════════════════════
+function makeDrag(el,name){
+  let d=false;
+  el.addEventListener('mousedown',e=>{d=true;e.preventDefault();e.stopPropagation();});
+  document.addEventListener('mousemove',e=>{
+    if(!d)return;
+    const c=document.getElementById('cvs').getBoundingClientRect();
+    const x=Math.max(30,Math.min(c.width-30,e.clientX-c.left));
+    const y=Math.max(30,Math.min(c.height-30,e.clientY-c.top));
+    el.style.left=x+'px';el.style.top=y+'px';
+    drag[name]={x,y};redrawWires();
+  });
+  document.addEventListener('mouseup',()=>{d=false;});
+}
+function redrawWires(){
+  const t=S.topo;if(!t)return;
+  const c=document.getElementById('cvs');
+  const pos=calcPos(t,c.offsetWidth,c.offsetHeight);
+  Object.keys(drag).forEach(k=>pos[k]=drag[k]);
+  function upd(id,an,bn){
+    const l=document.getElementById(id),a=pos[an],b=pos[bn];
+    if(l&&a&&b){l.setAttribute('x1',a.x);l.setAttribute('y1',a.y);l.setAttribute('x2',b.x);l.setAttribute('y2',b.y);}
+  }
+  (t.p2p_links||[]).forEach(lk=>upd('w-'+lk.from+'-'+lk.to,lk.from,lk.to));
+  (t.hubs||[]).forEach(h=>h.connected_devices.forEach(cd=>upd('w-'+h.name+'-'+cd.device,h.name,cd.device)));
+  (t.switches||[]).forEach(sw=>sw.connected_devices.forEach(cd=>upd('w-'+sw.name+'-'+cd.device,sw.name,cd.device)));
+  (t.hub_switch_links||[]).forEach(lk=>upd('w-'+lk.from+'-'+lk.to,lk.from,lk.to));
+}
+
+// ═══════════════════════════════════════════════
+// PACKET ANIMATION
+// ═══════════════════════════════════════════════
+function animateSend(srcName,sendType,receivers){
+  const t=S.topo;if(!t)return;
+  const cvs=document.getElementById('cvs');
+  const pos=calcPos(t,cvs.offsetWidth,cvs.offsetHeight);
+  Object.keys(drag).forEach(k=>pos[k]=drag[k]);
+  const src=pos[srcName];if(!src)return;
+  const cls='pkt '+(sendType==='broadcast'?'pb':sendType==='multicast'?'pm':'pu');
+
+  let mid=null,midName=null;
+  (t.hubs||[]).forEach(h=>{if(h.connected_devices.find(d=>d.device===srcName)){mid=pos[h.name];midName=h.name;}});
+  if(!mid)(t.switches||[]).forEach(sw=>{if(sw.connected_devices.find(d=>d.device===srcName)){mid=pos[sw.name];midName=sw.name;}});
+
+  if(mid){
+    fly(cvs,src,mid,cls,()=>{
+      pulse(midName);
+      const targets=sendType==='unicast'?receivers:(t.devices||[]).filter(d=>d.name!==srcName).map(d=>d.name);
+      targets.forEach((r,i)=>{
+        const rp=pos[r];if(!rp)return;
+        setTimeout(()=>fly(cvs,mid,rp,cls,()=>pulse(r)),i*100);
+      });
+    });
+  } else {
+    receivers.forEach((r,i)=>{
+      const rp=pos[r];if(!rp)return;
+      setTimeout(()=>fly(cvs,src,rp,cls,()=>pulse(r)),i*100);
+    });
+  }
+}
+
+function fly(cvs,from,to,cls,cb){
+  const dot=document.createElement('div');
+  dot.className=cls;dot.style.left=from.x+'px';dot.style.top=from.y+'px';
+  cvs.appendChild(dot);
+  let t0=null;
+  function step(ts){
+    if(!t0)t0=ts;
+    const p=Math.min((ts-t0)/480,1);
+    const e=p<.5?2*p*p:(4-2*p)*p-1;
+    dot.style.left=(from.x+(to.x-from.x)*e)+'px';
+    dot.style.top=(from.y+(to.y-from.y)*e)+'px';
+    p<1?requestAnimationFrame(step):(dot.remove(),cb&&cb());
+  }
+  requestAnimationFrame(step);
+}
+
+function pulse(name){
+  const el=document.getElementById('node-'+name);
+  if(!el)return;
+  el.classList.add('pulse');
+  setTimeout(()=>el.classList.remove('pulse'),700);
+}
+
+// ═══════════════════════════════════════════════
+// UI HELPERS
+// ═══════════════════════════════════════════════
+function updateInfoBar(t){
+  document.getElementById('ib-d').textContent=(t.devices||[]).length;
+  document.getElementById('ib-h').textContent=(t.hubs||[]).length;
+  document.getElementById('ib-s').textContent=(t.switches||[]).length;
+  document.getElementById('ib-br').textContent=(t.bridges||[]).length;
+  document.getElementById('ib-cd').textContent=t.total_collision_domains||0;
+  document.getElementById('ib-bd').textContent=t.total_broadcast_domains||0;
+}
+function updateStats(t){
+  document.getElementById('st-d').textContent=(t.devices||[]).length;
+  document.getElementById('st-cd').textContent=t.total_collision_domains||0;
+  document.getElementById('st-bd').textContent=t.total_broadcast_domains||0;
+  document.getElementById('st-f').textContent=(t.devices||[]).reduce((s,d)=>s+(d.sent||0),0);
+  const macs=[];
+  (t.switches||[]).forEach(sw=>(sw.mac_table||[]).forEach(e=>macs.push({...e,sw:sw.name})));
+  document.getElementById('mwrap').style.display=macs.length?'block':'none';
+  document.getElementById('mrows').innerHTML=macs.map(e=>`<div class="mrow"><span class="ma">${e.mac}</span><span>Port <span class="mp">${e.port}</span></span><span style="font-size:8px;color:var(--txt3)">${e.sw}</span></div>`).join('');
+}
+function updateDevList(t){
+  const p=document.getElementById('devlist');
+  const all=[...(t.devices||[]),...(t.hubs||[]),...(t.switches||[]),...(t.bridges||[])];
+  if(!all.length){p.innerHTML='<div class="lempty">No devices yet.</div>';return;}
+  let h='';
+  (t.devices||[]).forEach(d=>{
+    const g=d.multicast_group?` 📡${d.multicast_group}`:'';
+    h+=`<div class="dc"><div class="dch"><span>💻</span><span class="dn">${d.name}</span><span class="dtype dte">PC</span></div><div class="dmi">${d.mac}${g}</div><div class="dmi">Sent:${d.sent||0} Rcvd:${d.received||0}${d.connected_to?' → '+d.connected_to:''}</div></div>`;
+  });
+  (t.hubs||[]).forEach(h2=>{h+=`<div class="dc"><div class="dch"><span>🔵</span><span class="dn">${h2.name}</span><span class="dtype dth">HUB</span></div><div class="dmi">Ports:${h2.num_ports} Devices:${(h2.connected_devices||[]).length}</div></div>`;});
+  (t.switches||[]).forEach(sw=>{h+=`<div class="dc"><div class="dch"><span>🔲</span><span class="dn">${sw.name}</span><span class="dtype dts">SWITCH</span></div><div class="dmi">MACs:${(sw.mac_table||[]).length}</div></div>`;});
+  (t.bridges||[]).forEach(br=>{h+=`<div class="dc"><div class="dch"><span>🌉</span><span class="dn">${br.name}</span><span class="dtype dtb">BRIDGE</span></div><div class="dmi">Segments:${(br.segments||[]).length} MACs:${(br.mac_table||[]).length}</div></div>`;});
+  p.innerHTML=h;
+}
+function updateSelects(t){
+  const src=document.getElementById('t-src'),dst=document.getElementById('t-dst');
+  const sv=src.value,dv=dst.value;
+  src.innerHTML='<option value="">Source device...</option>';
+  dst.innerHTML='<option value="">Destination...</option>';
+  (t.devices||[]).forEach(d=>{src.innerHTML+=`<option>${d.name}</option>`;dst.innerHTML+=`<option>${d.name}</option>`;});
+  if(sv)src.value=sv;if(dv)dst.value=dv;
+  refreshTargets();
+}
+function load(show){document.getElementById('loader').classList.toggle('show',!!show);}
+let _tt;
+function toast(msg,type='success'){
+  const t=document.getElementById('toast');t.textContent=msg;t.className='show '+type;
+  clearTimeout(_tt);_tt=setTimeout(()=>t.className='',3200);
+}
+
+// poll
+setInterval(async()=>{
+  const t=S.topo;
+  if(t&&((t.devices||[]).length||(t.hubs||[]).length)){
+    const r=await api('logs');
+    if(r.logs&&r.logs.length!==S.logs.length)updateLogs(r.logs);
+  }
+},2500);
+
+init();
+</script>
+</body>
+</html>
